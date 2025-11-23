@@ -1,9 +1,14 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { SweetsData } from "../types";
 
-// Initialize the client
-// The API key must be provided via process.env.API_KEY
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Helper function to get the AI client only when needed
+const getAiClient = () => {
+  const apiKey = process.env.API_KEY;
+  if (!apiKey) {
+    throw new Error("API Key is missing. Please check your settings.");
+  }
+  return new GoogleGenAI({ apiKey });
+};
 
 interface GenerateOptions {
   refinementContext?: { 
@@ -34,7 +39,6 @@ export const generateSweetsIdea = async (
 
   if (refinementContext) {
     // Sanitize currentData to remove heavy image data (base64 strings) before sending to LLM
-    // Sending base64 images as text in the prompt consumes massive tokens and causes errors
     const sanitizedData = {
       ...refinementContext.currentData,
       recipe: refinementContext.currentData.recipe.map((step) => {
@@ -87,6 +91,9 @@ export const generateSweetsIdea = async (
       8. visualPrompt: このスイーツの完成形の見た目を画像生成AIに指示するための詳細な英語のプロンプト。
     `;
   }
+
+  // Initialize client here to prevent crash on load
+  const ai = getAiClient();
 
   const response = await ai.models.generateContent({
     model: 'gemini-2.5-flash',
@@ -141,7 +148,8 @@ export const generateSweetsIdea = async (
 };
 
 export const generateSweetsImage = async (visualPrompt: string, style: 'photo' | 'sketch' = 'photo'): Promise<string> => {
-  // Using gemini-2.5-flash-image as per guidelines for general image generation
+  // Initialize client here to prevent crash on load
+  const ai = getAiClient();
   
   let stylePrompt = "";
   if (style === 'photo') {
