@@ -33,12 +33,23 @@ export const generateSweetsIdea = async (
   }
 
   if (refinementContext) {
+    // Sanitize currentData to remove heavy image data (base64 strings) before sending to LLM
+    // Sending base64 images as text in the prompt consumes massive tokens and causes errors
+    const sanitizedData = {
+      ...refinementContext.currentData,
+      recipe: refinementContext.currentData.recipe.map((step) => {
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        const { imageUrl, ...rest } = step;
+        return rest;
+      })
+    };
+
     prompt = `
       あなたは世界的に有名なパティシエ兼経営コンサルタントです。
       以下の既存のスイーツのアイデアを、クライアントの要望に合わせて改良・修正してください。
 
       【現在のスイーツデータ】
-      ${JSON.stringify(refinementContext.currentData)}
+      ${JSON.stringify(sanitizedData)}
 
       【クライアントの要望】
       「${refinementContext.instruction}」
